@@ -136,6 +136,7 @@ from ..module_utils.exceptions import ValidationException, FlightctlApiException
 from ansible.plugins.inventory import BaseInventoryPlugin, Constructable
 from ansible.utils.display import Display
 from contextlib import contextmanager
+from enum import Enum
 import re
 import base64
 import tempfile
@@ -319,6 +320,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
             for device in devices:
                 if hasattr(device, 'to_dict'):
                     device = device.to_dict()
+                device = _convert_enums_to_strings(device)
                 device_id, metadata = _validate_device(device, self.device_name)
                 if device_id not in self.inventory.hosts:
                     self._populate_inventory_devices([device])
@@ -335,6 +337,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
         # Process devices
         for raw in devices:
             device = raw.to_dict() if hasattr(raw, 'to_dict') else raw
+            device = _convert_enums_to_strings(device)
             device_id, metadata = _validate_device(device, self.device_name)
             self.info(f"Populating inventory with device {device_id}", min_verbosity_level=1)
 
@@ -381,6 +384,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                 f"Retrieved {len(devices)} devices for group {group_name} by labels {label_selectors} and fields {field_selectors}")
             for raw in devices:
                 device = raw.to_dict() if hasattr(raw, 'to_dict') else raw
+                device = _convert_enums_to_strings(device)
                 device_id, metadata = _validate_device(device, self.device_name)
                 self._add_to_group(group_name, device_id)
 
@@ -392,6 +396,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable):
                 f"Retrieved {len(devices)} devices for grouping by {group_by} with labels {label_selectors} and fields {field_selectors}")
             for raw in devices:
                 device = raw.to_dict() if hasattr(raw, 'to_dict') else raw
+                device = _convert_enums_to_strings(device)
                 device_id, metadata = _validate_device(device, self.device_name)
                 value = _get_value_by_dotted_path(device, group_by)
                 if value is None:
@@ -647,6 +652,20 @@ def _validate_fleet(fleet) -> str:
 def remove_quotes(text):
     """ Remove double and single quotes """
     return text.replace("'", "").replace('"', "")
+
+
+def _convert_enums_to_strings(obj: Any) -> Any:
+    """
+    Recursively convert all Enum values in a data structure to their string values.
+    This is needed because Ansible's inventory.set_variable() doesn't support Enum types.
+    """
+    if isinstance(obj, Enum):
+        return obj.value
+    if isinstance(obj, dict):
+        return {k: _convert_enums_to_strings(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_convert_enums_to_strings(item) for item in obj]
+    return obj
 
 
 def _fetch_fleet_devices(fleet_id: str, config, limit_per_page: int) -> List[Any]:
