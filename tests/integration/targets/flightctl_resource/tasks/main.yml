@@ -1,4 +1,9 @@
 ---
 - include_tasks: update-device.yml
-# TODO - re-enable the delete template versions when the service stops returning a 500
+- include_tasks: fleet-lifecycle.yml
+- include_tasks: repository-lifecycle.yml
+- include_tasks: resourcesync-lifecycle.yml
+- include_tasks: idempotency.yml
+# Disabled: FlightCtl service returns 500 for TemplateVersion delete operations.
+# Re-enable when the backend is fixed: uncomment the line below.
 # - include_tasks: delete-template-versions.yml

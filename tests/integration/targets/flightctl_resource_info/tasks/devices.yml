@@ -63,6 +63,21 @@
         - rendered_result is success
         - rendered_result.result.data[0].spec.os.image == "quay.io/redhat/rhde:9.2"
 
+  - name: Query for devices by fleet (field_selector metadata.owner)
+    flightctl.core.flightctl_resource_info:
+      <<: *connection_info
+      kind: Device
+      field_selector: "metadata.owner=Fleet/{{ fleet_name }}"
+    register: owner_filter_result
+
+  - name: Assert that devices were fetched by fleet owner
+    ansible.builtin.assert:
+      that:
+        - owner_filter_result is success
+        - owner_filter_result.result.data is defined
+        - owner_filter_result.result.data | length >= 1
+        - device_name in (owner_filter_result.result.data | map(attribute='metadata.name') | list)
+
   - name: Create a test device with a label
     flightctl.core.flightctl_resource:
       <<: *connection_info
@@ -159,7 +174,7 @@
       field_selector: "metadata.name!={{ device_name }}"
     register: field_selector_result
 
-  - name: Assert that the status filtered data was fetched
+  - name: Assert that the field selector filtered data was fetched
     ansible.builtin.assert:
       that:
         - field_selector_result is success

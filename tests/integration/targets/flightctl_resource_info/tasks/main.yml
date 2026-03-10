@@ -3,3 +3,4 @@
   - include_tasks: fleets.yml
   - include_tasks: repository.yml
   - include_tasks: resource-sync.yml
+  - include_tasks: negative-cases.yml
